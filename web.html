@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Charity Contract Frontend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: block;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .message {
+            color: #dc358e;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Charity Contract</h2>
+        <label for="beneficiaryAddress">Beneficiary Address:</label>
+        <input type="text" id="beneficiaryAddress">
+        <label for="beneficiaryName">Beneficiary Name:</label>
+        <input type="text" id="beneficiaryName">
+        <button onclick="addBeneficiary()">Add Beneficiary</button>
+        <button onclick="removeBeneficiary()">Remove Beneficiary</button>
+        <div id="message" class="message"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.3/dist/web3.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.4/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.4/firebase-database-compat.js"></script>
+      
+    <script>
+        // Connect to Ganache
+        if (typeof web3 !== 'undefined') {
+            web3 = new Web3(web3.currentProvider);
+        } else {
+            web3 = new Web3(new Web3.providers.HttpProvider("HTTP://127.0.0.1:7545")); // Ganache URL
+        }
+        // Set the contract address and abi
+        const contractAddress = '0xC9c6AC76f550d6bb8a228A5112521A7e4e9062d0'; // Replace with your deployed contract address
+        const contractAbi = [ {
+      "inputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "beneficiaries",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "beneficiaryInfo",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "beneficiaryAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "beneficiaryName",
+          "type": "string"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_beneficiary",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "_beneficiaryName",
+          "type": "string"
+        }
+      ],
+      "name": "addBeneficiary",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_beneficiary",
+          "type": "address"
+        }
+      ],
+      "name": "removeBeneficiary",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    } ]; // Replace with your contract ABI
+
+        const charityContract = new web3.eth.Contract(contractAbi, contractAddress);
+
+        // Initialize Firebase with your config
+const firebaseConfig = {
+  apiKey: "AIzaSyBk40yqOjjZi0rZcLLpvz3QHBomjCuyLKw",
+  authDomain: "charity-dapp.firebaseapp.com",
+  databaseURL: "https://charity-dapp-default-rtdb.firebaseio.com",
+  projectId: "charity-dapp",
+  storageBucket: "charity-dapp.appspot.com",
+  messagingSenderId: "927162776241",
+  appId: "1:927162776241:web:c4d19dde17ea9a0b260090",
+  measurementId: "G-RW62ZJ0JSH"
+};
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Initialize Realtime Database
+const database = firebase.database();
+
+// Reference to the database
+const db = firebase.database();
+
+async function addBeneficiary() {
+    const beneficiaryAddress = document.getElementById('beneficiaryAddress').value;
+    const beneficiaryName = document.getElementById('beneficiaryName').value;
+    try {
+        await charityContract.methods.addBeneficiary(beneficiaryAddress, beneficiaryName).send({from: web3.eth.defaultAccount});
+        // Store data in Firebase
+        await db.ref('beneficiaries').child(beneficiaryAddress).set({
+            beneficiaryName: beneficiaryName
+        });
+        showMessage('Beneficiary added successfully!', 'success');
+    } catch (error) {
+        showMessage('Error adding beneficiary: ' + error.message, 'error');
+    }
+}
+
+async function removeBeneficiary() {
+    const beneficiaryAddress = document.getElementById('beneficiaryAddress').value;
+    try {
+        await charityContract.methods.removeBeneficiary(beneficiaryAddress).send({from: web3.eth.defaultAccount});
+        // Remove data from Firebase
+        await db.ref('beneficiaries').child(beneficiaryAddress).remove();
+        showMessage('Beneficiary removed successfully!', 'success');
+    } catch (error) {
+        showMessage('Error removing beneficiary: ' + error.message, 'error');
+    }
+}
+// Example function to retrieve beneficiaries from Firebase
+async function loadBeneficiaries() {
+    try {
+        const snapshot = await db.ref('beneficiaries').once('value');
+        const beneficiaries = snapshot.val();
+        // Process the retrieved data
+        console.log(beneficiaries);
+    } catch (error) {
+        console.error('Error loading beneficiaries: ' + error.message);
+    }
+}
+
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            if (type === 'error') {
+                messageDiv.style.color = '#dc3545';
+            } else {
+                messageDiv.style.color = '#28a745';
+            }
+        }
+
+        // Set default account
+        async function setDefaultAccount() {
+            const accounts = await web3.eth.getAccounts();
+            web3.eth.defaultAccount = accounts[0]; // You can choose any account from the accounts array
+        }
+
+        // Call setDefaultAccount function when the window loads
+        window.onload = async () => {
+            await setDefaultAccount();
+            // await loadDonations(); // Call loadDonations or any other function that requires the default account
+        };
+    </script>
+</body>
+</html>
